@@ -19,7 +19,7 @@ type videofile struct {
 	ssTex          rl.Texture2D
 }
 
-func exportCroppedVideo(video *videofile, rect *rectArea) error {
+func exportCroppedVideo(video *videofile, rect *rectArea) {
 	geometry := fmt.Sprintf("%d:%d:%d:%d",
 		int32(rect.maxx.X-rect.minn.X),
 		int32(rect.maxx.Y-rect.minn.Y),
@@ -38,11 +38,10 @@ func exportCroppedVideo(video *videofile, rect *rectArea) error {
 		Output(outfname, ffmpeg.KwArgs{
 			"filter:v": "crop=" + geometry,
 		}).OverWriteOutput().Run()
-	if err != nil {
-		return fmt.Errorf("could not crop video '%s': %w", video.fname, err)
-	}
 
-	return nil
+    if err != nil {
+	    log.Fatalf("could not crop video '%s': %w", video.fname, err)
+    }
 }
 
 func getFrame(video *videofile) error {

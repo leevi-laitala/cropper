@@ -63,6 +63,7 @@ func resetCamera(video *videofile, cam *rl.Camera2D) {
 }
 
 func run(videoFiles []videofile) {
+	rl.SetConfigFlags(rl.FlagWindowResizable)
 	rl.InitWindow(screenWidth, screenHeight, "Cropper")
 	rl.SetTargetFPS(100)
 
@@ -95,10 +96,7 @@ func run(videoFiles []videofile) {
 		}
 
 		if rl.IsKeyPressed(rl.KeyEnter) {
-			err := exportCroppedVideo(&videoFiles[currentVideo], &rect)
-			if err != nil {
-				log.Fatalf("%v", err)
-			}
+			go exportCroppedVideo(&videoFiles[currentVideo], &rect)
 
 			currentVideo++
 			if currentVideo >= len(videoFiles) {
