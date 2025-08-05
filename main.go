@@ -5,14 +5,11 @@ import (
 )
 
 func main() {
-	videoFiles, err := populateVideoFiles()
+	err := populateVideoFiles()
 	if err != nil {
 		log.Fatalln(err)
-
 		return
 	}
 
-	run(videoFiles)
-
-	cleanScreenshots(videoFiles)
+	run()
 }

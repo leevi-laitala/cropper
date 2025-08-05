@@ -2,9 +2,11 @@ package main
 
 import (
 	"log"
+	"fmt"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	v "github.com/AlexEidt/Vidio"
 )
 
 func panAndZoom(cam *rl.Camera2D) {
@@ -20,7 +22,7 @@ func panAndZoom(cam *rl.Camera2D) {
 			scaleFactor = 1 / scaleFactor
 		}
 
-		cam.Zoom = float32(math.Max(0.05, math.Min(float64(cam.Zoom)*scaleFactor, 10)))
+		cam.Zoom = float32(math.Max(0.05, math.Min(float64(cam.Zoom) * scaleFactor, 10)))
 	}
 
 	if rl.IsMouseButtonDown(1) {
@@ -29,100 +31,137 @@ func panAndZoom(cam *rl.Camera2D) {
 		delta = rl.Vector2Scale(delta, -1/cam.Zoom)
 		cam.Target = rl.Vector2Add(cam.Target, delta)
 
-		if mouseCurPos.X < 0 {
-			rl.SetMousePosition(int(mouseCurPos.X)+screenWidth, int(mouseCurPos.Y))
+		if int32(mouseCurPos.X) < 0 {
+			rl.SetMousePosition(int(mouseCurPos.X) + int(screenWidth), int(mouseCurPos.Y))
 		}
 
-		if mouseCurPos.X > screenWidth {
-			rl.SetMousePosition(int(mouseCurPos.X)-screenWidth, int(mouseCurPos.Y))
+		if int32(mouseCurPos.X) > screenWidth {
+			rl.SetMousePosition(int(mouseCurPos.X) - int(screenWidth), int(mouseCurPos.Y))
 		}
 
-		if mouseCurPos.Y < 0 {
-			rl.SetMousePosition(int(mouseCurPos.X), int(mouseCurPos.Y)+screenHeight)
+		if int32(mouseCurPos.Y) < 0 {
+			rl.SetMousePosition(int(mouseCurPos.X), int(mouseCurPos.Y) + int(screenHeight))
 		}
 
-		if mouseCurPos.Y > screenHeight {
-			rl.SetMousePosition(int(mouseCurPos.X), int(mouseCurPos.Y)-screenHeight)
+		if int32(mouseCurPos.Y) > screenHeight {
+			rl.SetMousePosition(int(mouseCurPos.X), int(mouseCurPos.Y) - int(screenHeight))
 		}
 	}
 }
 
-func resetCamera(video *videofile, cam *rl.Camera2D) {
+func resetCamera(cam *rl.Camera2D) {
 	cam.Target = rl.Vector2{
-		X: float32(video.ssTex.Width) / 2,
-		Y: float32(video.ssTex.Height) / 2,
+		X: float32(curFrameTex.Width) / 2,
+		Y: float32(curFrameTex.Height) / 2,
 	}
 	cam.Offset = rl.Vector2{
 		X: float32(screenWidth) / 2,
 		Y: float32(screenHeight) / 2,
 	}
 	cam.Zoom = float32(math.Min(
-		float64(screenWidth)/float64(video.ssTex.Width),
-		float64(screenHeight)/float64(video.ssTex.Height),
+		float64(screenWidth)/float64(curFrameTex.Width),
+		float64(screenHeight)/float64(curFrameTex.Height),
 	) * 0.9)
 }
 
-func run(videoFiles []videofile) {
+func initNewVideo() error {
+	if curVideo != nil {
+		curVideo.Close()
+	}
+
+	curFrame = 0
+
+	var err error = nil
+
+	curVideo, err = v.NewVideo(videoFiles[curVideoIndex])
+	if err != nil {
+		return fmt.Errorf("error loading new video: %w", err)
+	}
+
+	err = loadVideoFrameToTexture()
+	if err != nil {
+		return fmt.Errorf("error loading frame to texture: %w", err)
+	}
+
+	return nil
+}
+
+func run() {
 	rl.SetConfigFlags(rl.FlagWindowResizable)
 	rl.InitWindow(screenWidth, screenHeight, "Cropper")
 	rl.SetTargetFPS(100)
 
-	currentVideo := int(0)
-
-	err := reloadImage(&videoFiles[currentVideo])
+	err := initNewVideo()
 	if err != nil {
-		log.Fatalf("%v", err)
-	}
-
-	err = updateImageFrame(&videoFiles[currentVideo], false)
-	if err != nil {
-		log.Fatalf("%v", err)
+		log.Fatalf("failed to load first video: %w", err)
 	}
 
 	cam := rl.Camera2D{}
-	resetCamera(&videoFiles[currentVideo], &cam)
+	resetCamera(&cam)
 
 	rect := rectArea{}
-	resetAreaRect(&rect, &videoFiles[currentVideo])
+	resetAreaRect(&rect)
+
+	seeker := seekerRect{}
+	resetSeeker(&seeker)
 
 	for !rl.WindowShouldClose() {
 		panAndZoom(&cam)
 
-		updateAreaRect(&rect, &videoFiles[currentVideo], &cam)
+		updateAreaRect(&rect, &cam)
 
-		err = updateImageFrame(&videoFiles[currentVideo], false)
-		if err != nil {
-			log.Fatalf("%v", err)
+		frameUpdated := getSeekValue()
+		if frameUpdated {
+			updateSeeker(&seeker)
+
+			err := loadVideoFrameToTexture()
+			if err != nil {
+				curVideo.Close()
+				log.Fatalf("error loading frame to texture: %w", err)
+			}
 		}
 
+		// Enter key exports current video and loads in next video
 		if rl.IsKeyPressed(rl.KeyEnter) {
-			go exportCroppedVideo(&videoFiles[currentVideo], &rect)
+			// Export current video
+			go exportCroppedVideo(videoFiles[curVideoIndex], muted, frameBegin, frameEnd, int32(curVideo.Frames()), curVideo.FPS(), rect)
 
-			currentVideo++
-			if currentVideo >= len(videoFiles) {
+			curVideoIndex++
+			if curVideoIndex >= len(videoFiles) {
 				log.Println("All videos cropped")
 
 				break
 			}
 
-			err = updateImageFrame(&videoFiles[currentVideo], true)
-			if err != nil {
-				log.Fatalf("%v", err)
-			}
+			resetAreaRect(&rect)
+			resetCamera(&cam)
 
-			resetAreaRect(&rect, &videoFiles[currentVideo])
+			initNewVideo()
+
+			resetSeeker(&seeker)
 		}
 
 		if rl.IsKeyPressed(rl.KeyC) {
-			resetCamera(&videoFiles[currentVideo], &cam)
+			resetCamera(&cam)
+		}
+
+		if rl.IsWindowResized() {
+			screenWidth = int32(rl.GetScreenWidth())
+			screenHeight = int32(rl.GetScreenHeight())
+
+			resetCamera(&cam)
 		}
 
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.Beige)
 		rl.BeginMode2D(cam)
 
-		rl.DrawTexture(videoFiles[currentVideo].ssTex, 0, 0, rl.White)
+		rl.DrawTexture(curFrameTex, 0, 0, rl.White)
 		drawAreaRect(&rect)
+
+		rl.EndMode2D()
+
+		drawSeeker(&seeker, &cam)
 
 		rl.EndDrawing()
 	}

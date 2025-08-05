@@ -1,23 +1,26 @@
 # Cropper
 
-Simple bulk video editor which has only crop feature implemented.
+Simple bulk video editor.
 
-Video corpping is done by ffmpeg, for which the program will provide geometry
-of the area you wish to crop.
+Features:
+- Cropping
+- Trimming
+- Muting
 
 ## Usage:
 
-Execute the program in directory with video files you wish to crop. A window
-will open which allows you to select an area from the video that you wish to
-keep.
+```
+$ cropper <path (optional)>
+```
 
-By pressing **enter** the video will be cropped with current selection into a
-new file and next video, if such exists, will be prompted for cropping.
-Existing  files won't be overwritten, new files are created with '_cropped' 
-appended to the original filename.
+Once executed, program finds video files and launches a window for simple video 
+editor that allows for cropping, trimming and muting.
 
-At the moment the program won't accept any flags or command line arguments.
-Once executed, it will look for video files from current directory.
+Cropper attempts to find video files from path provided with cmd arg. If not 
+provided, defaults to cwd. The program will not recurse into any directories.
+
+All edits are commited once **enter** is pressed. Original video file is not 
+overwritten, but a "_cropped" suffix is appended to the filename.
 
 ### Keybinds
 
@@ -26,8 +29,31 @@ Once executed, it will look for video files from current directory.
 | Left mouse      | Grab and move selection edges                   |
 | Right mouse     | Pan viewport                                    |
 | Mouse scroll    | Zoom viewport                                   |
+| A               | Set trimming beginning                          |
+| B               | Set trimming end                                |
+| Shift+B         | Seek to video beginning                         |
+| Shift+E         | Seek to video end                               |
+| Right           | Seek one frame forward                          |
+| Left            | Seek one frame backward                         |
+| Up              | Seek one second forward                         |
+| Down            | Seek one second backward                        |
 | C               | Reset viewport                                  |
 | R               | Reset current selection                         |
-| Enter           | Export current crop and move on to next video   |
+| Enter           | Export current video and move on to next video  |
 | Esc             | Close                                           |
+
+Seeking actions can be multiplied similar to vim actions. For example seeking 
+15 frames forward can be accomplished by pressing "1+5+Right", or two seconds
+backwards with "2+Down"
+
+## Compilation
+
+Run the following:
+
+```
+$ git clone https://github.com/leevi-laitala/cropper.git
+$ cd cropper
+$ go build
+$ ./cropper
+```
 

@@ -8,6 +8,7 @@ require (
 )
 
 require (
+	github.com/AlexEidt/Vidio v1.5.1 // indirect
 	github.com/aws/aws-sdk-go v1.38.20 // indirect
 	github.com/ebitengine/purego v0.8.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
