@@ -37,6 +37,7 @@ overwritten, but a "_cropped" suffix is appended to the filename.
 | Left            | Seek one frame backward                         |
 | Up              | Seek one second forward                         |
 | Down            | Seek one second backward                        |
+| M               | Toggle mute                                     |
 | C               | Reset viewport                                  |
 | R               | Reset current selection                         |
 | Enter           | Export current video and move on to next video  |
