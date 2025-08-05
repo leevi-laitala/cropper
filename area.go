@@ -82,14 +82,14 @@ func resizeAreaRect(rect *rectArea, mousepos, constraintMin, constraintMax *rl.V
 	}
 }
 
-func updateAreaRect(rect *rectArea, video *videofile, cam *rl.Camera2D) {
+func updateAreaRect(rect *rectArea, cam *rl.Camera2D) {
 	if rl.IsMouseButtonDown(0) {
 		mousepos := rl.GetScreenToWorld2D(rl.GetMousePosition(), *cam)
 
 		constraintMin := rl.Vector2{X: 0, Y: 0}
 		constraintMax := rl.Vector2{
-			X: float32(video.ssTex.Width),
-			Y: float32(video.ssTex.Height),
+			X: float32(curFrameTex.Width),
+			Y: float32(curFrameTex.Height),
 		}
 
 		evaluateAttachedHandle(rect, &mousepos)
@@ -102,18 +102,18 @@ func updateAreaRect(rect *rectArea, video *videofile, cam *rl.Camera2D) {
 	}
 
 	if rl.IsKeyPressed(rl.KeyR) {
-		resetAreaRect(rect, video)
+		resetAreaRect(rect)
 	}
 }
 
-func resetAreaRect(rect *rectArea, video *videofile) {
+func resetAreaRect(rect *rectArea) {
 	rect.minn = rl.Vector2{
 		X: 0,
 		Y: 0,
 	}
 	rect.maxx = rl.Vector2{
-		X: float32(video.ssTex.Width),
-		Y: float32(video.ssTex.Height),
+		X: float32(curFrameTex.Width),
+		Y: float32(curFrameTex.Height),
 	}
 }
 
