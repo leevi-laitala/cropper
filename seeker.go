@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -30,50 +31,57 @@ func resetSeeker(seeker *seekerRect) {
 	seeker.height = 16
 }
 
+//nolint:unparam
 func getTextOffsetX(text string, fontsize int32, x int32) int32 {
 	textWidth := rl.MeasureText(text, fontsize)
 	
-	var xx int32 = x - textWidth / 2
+	newx := x - textWidth / 2
 
-	if xx < 16 {
-		xx = 16
+	if newx < 16 {
+		newx = 16
 	}
 
-	if xx > int32(rl.GetScreenWidth()) - textWidth - 16 {
-		xx = int32(rl.GetScreenWidth()) - textWidth - 16
+	if newx > int32(rl.GetScreenWidth()) - textWidth - 16 {
+		newx = int32(rl.GetScreenWidth()) - textWidth - 16
 	}
 
-	return xx
+	return newx
 }
 
-func drawSeeker(seeker *seekerRect, cam *rl.Camera2D) {
+func drawSeeker(seeker *seekerRect) {
 	rl.DrawRectangle(0, 0, seeker.width, seeker.height, rl.Blue)
 
 	// Font size
-	var fs int32 = 24
+	var fontsize int32 = 24
 
 	// Current frame text
-	t := fmt.Sprintf("%d", curFrame)
-	rl.DrawText(t, getTextOffsetX(t, fs, seeker.width), seeker.height, fs, rl.Blue)
+	frametext := strconv.Itoa(curFrame)
+	rl.DrawText(frametext, getTextOffsetX(frametext, fontsize, seeker.width),
+		seeker.height, fontsize, rl.Blue)
 
 	if frameBegin != 0 {
-		rl.DrawLine(frameToWidth(frameBegin), 0, frameToWidth(frameBegin), seeker.height, rl.Red)
-		t = fmt.Sprintf("%d ->", frameBegin)
-		rl.DrawText(t, getTextOffsetX(t, fs, frameToWidth(frameBegin)), seeker.height, fs, rl.Red)
+		rl.DrawLine(frameToWidth(frameBegin), 0, frameToWidth(frameBegin),
+			seeker.height, rl.Red)
+		frametext = fmt.Sprintf("%d ->", frameBegin)
+		rl.DrawText(frametext, getTextOffsetX(frametext, fontsize,
+			frameToWidth(frameBegin)), seeker.height, fontsize, rl.Red)
 	}
 
 	if frameEnd != int32(curVideo.Frames() - 1) {
-		rl.DrawLine(frameToWidth(frameEnd), 0, frameToWidth(frameEnd), seeker.height, rl.Green)
-		t = fmt.Sprintf("<- %d", frameEnd)
-		rl.DrawText(t, getTextOffsetX(t, fs, frameToWidth(frameEnd)), seeker.height, fs, rl.Green)
+		rl.DrawLine(frameToWidth(frameEnd), 0, frameToWidth(frameEnd),
+			seeker.height, rl.Green)
+		frametext = fmt.Sprintf("<- %d", frameEnd)
+		rl.DrawText(frametext, getTextOffsetX(frametext, fontsize,
+			frameToWidth(frameEnd)), seeker.height, fontsize, rl.Green)
 	}
 
-	t = fmt.Sprintf("Muted: %t", muted)
-	rl.DrawText(t, getTextOffsetX(t, fs, 0), int32(rl.GetScreenHeight()) - seeker.height * 2, fs, rl.Blue)
+	frametext = fmt.Sprintf("Muted: %t", muted)
+	rl.DrawText(frametext, getTextOffsetX(frametext, fontsize, 0),
+		int32(rl.GetScreenHeight()) - seeker.height * 2, fontsize, rl.Blue)
 }
 
 // Vim style, type numbers for multiplier for action key
-// E.g. by pressing "13<left-key>", seeker moves thirteen frames forward
+// E.g. by pressing "13<left-key>", seeker moves thirteen frames forward.
 func updateMultiplier() {
 	lastKey := rl.GetKeyPressed()
 	if lastKey >= 48 && lastKey <= 57 { // Number key has been pressed
@@ -97,7 +105,61 @@ func getMultiplier() int {
 	return int(multiplier)
 }
 
-// Returns true if frame was updated
+//nolint:cyclop
+func handleKeys() {
+	if rl.IsKeyPressed(rl.KeyLeft) { // Seek frames forward
+		curFrame -= getMultiplier()
+	}
+
+	if rl.IsKeyPressed(rl.KeyRight) { // Seek frames backward
+		curFrame += getMultiplier()
+	}
+
+	if rl.IsKeyPressed(rl.KeyUp) { // Seek seconds forward
+		curFrame += int(curVideo.FPS()) * getMultiplier()
+	}
+
+	if rl.IsKeyPressed(rl.KeyDown) { // Seek seconds backward
+		curFrame -= int(curVideo.FPS()) * getMultiplier()
+	}
+
+	// Seek to first frame
+	if rl.IsKeyPressed(rl.KeyB) && rl.IsKeyDown(rl.KeyLeftShift) {
+		curFrame = 0
+	}
+
+	// Seek to last frame
+	if rl.IsKeyPressed(rl.KeyE) && rl.IsKeyDown(rl.KeyLeftShift) {
+		curFrame = curVideo.Frames() - 1
+	}
+
+	if rl.IsKeyPressed(rl.KeyM) { // Toggle mute
+		muted = !muted
+	}
+
+	if rl.IsKeyPressed(rl.KeyA) { // Set trim point A
+		frameBegin = int32(curFrame)
+	}
+
+	// Set trim point B
+	if rl.IsKeyPressed(rl.KeyB) && !rl.IsKeyDown(rl.KeyLeftShift) {
+		frameEnd = int32(curFrame)
+	}
+}
+
+func evalTrimPoints() {
+	// Beginning and end cannot be at the same frame
+	if frameBegin == frameEnd {
+		frameBegin = 0
+	}
+
+	// Swap if wrong way around, like B being before A
+	if frameBegin > frameEnd {
+		frameEnd, frameBegin = frameBegin, frameEnd
+	}
+}
+
+// Returns true if frame was updated.
 func getSeekValue() bool {
 	updated := false
 
@@ -105,34 +167,9 @@ func getSeekValue() bool {
 
 	prevFrame := curFrame
 
-	if rl.IsKeyPressed(rl.KeyLeft) {
-		curFrame -= getMultiplier()
-	} else if rl.IsKeyPressed(rl.KeyRight) {
-		curFrame += getMultiplier()
-	} else if rl.IsKeyPressed(rl.KeyUp) {
-		curFrame += int(curVideo.FPS()) * getMultiplier()
-	} else if rl.IsKeyPressed(rl.KeyDown) {
-		curFrame -= int(curVideo.FPS()) * getMultiplier()
-	} else if rl.IsKeyDown(rl.KeyLeftShift) && rl.IsKeyPressed(rl.KeyE) {
-		curFrame = int(curVideo.Frames()) - 1
-	} else if rl.IsKeyDown(rl.KeyLeftShift) && rl.IsKeyPressed(rl.KeyB) {
-		curFrame = 0
-	} else if rl.IsKeyPressed(rl.KeyM) {
-		muted = !muted
-	}
+	handleKeys()
 
-	if rl.IsKeyPressed(rl.KeyA) {
-		frameBegin = int32(curFrame)
-	}
-	if rl.IsKeyPressed(rl.KeyB) {
-		frameEnd = int32(curFrame)
-	}
-
-	if frameBegin > frameEnd {
-		tmp := frameEnd
-		frameEnd = frameBegin
-		frameBegin = tmp
-	}
+	evalTrimPoints()
 
 	if curFrame != prevFrame {
 		updated = true

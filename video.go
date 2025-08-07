@@ -18,7 +18,7 @@ func loadVideoFrameToTexture() error {
 		rl.UnloadTexture(curFrameTex)
 	}
 
-	err := curVideo.ReadFrame(int(curFrame))
+	err := curVideo.ReadFrame(curFrame)
 	if err != nil {
 		return fmt.Errorf("could not read frame '%d' to framebuffer: %w", curFrame, err)
 	}
@@ -34,21 +34,55 @@ func loadVideoFrameToTexture() error {
 	return nil
 }
 
-// Convert frames to HH:MM:SS.mmm timestamp from ffmpeg
+// Convert frames to HH:MM:SS.mmm timestamp from ffmpeg.
 func convertFramesToTimestamp(frames int32, fps float64) string {
-	var frameLength float64 = 1 / fps * 1000
+	frameLength := 1 / fps * 1000
 
-	var milliseconds int32 = int32(frameLength * float64(frames))
+	milliseconds := int32(frameLength * float64(frames))
 
-	var mmm int32 = milliseconds % 1000
-	var SS int32 = (milliseconds / 1000) % 60
-	var MM int32 = (milliseconds / 1000 / 60) % 60
-	var HH int32 = (milliseconds / 1000 / 60 / 60) % 60
+	mmm := milliseconds % 1000
+	SS := (milliseconds / 1000) % 60
+	MM := (milliseconds / 1000 / 60) % 60
+	HH := (milliseconds / 1000 / 60 / 60) % 60
 
 	return fmt.Sprintf("%.2d:%.2d:%.2d.%.3d", HH, MM, SS, mmm)
 }
 
-func exportCroppedVideo(fname string, mute bool, framesFrom int32, framesTo int32, framesTotal int32, fps float64, rect rectArea) {
+func exportScreenshot(fname string, frame int32, fps float64, rect rectArea) {
+	geometry := fmt.Sprintf("%d:%d:%d:%d",
+		int32(rect.maxx.X - rect.minn.X),
+		int32(rect.maxx.Y - rect.minn.Y),
+		int32(rect.minn.X),
+		int32(rect.minn.Y))
+
+	fnameWithoutExtension := strings.ReplaceAll(filepath.Base(fname),
+		filepath.Ext(fname), "")
+
+	outfname := fmt.Sprintf("%s%s%s",
+		fnameWithoutExtension,
+		ssSuffix,
+		".jpg")
+
+	if len(os.Args) == 2 {
+		outfname = filepath.Join(os.Args[1], outfname)
+	}
+
+	inArgs := ffmpeg.KwArgs{
+		"ss": convertFramesToTimestamp(frame, fps),
+	}
+	outArgs := ffmpeg.KwArgs{
+		"filter:v": "crop=" + geometry,
+		"frames:v": "1",
+		"q:v": "2",
+	}
+
+	err := ffmpeg.Input(fname, inArgs).Output(outfname, outArgs).OverWriteOutput().Run()
+    if err != nil {
+	    log.Fatalf("could not create screenshot '%s': %v", fname, err)
+    }
+}
+
+func exportCroppedVideo(fname string, mute bool, framesFrom int32, framesTo int32, fps float64, rect rectArea) {
 	geometry := fmt.Sprintf("%d:%d:%d:%d",
 		int32(rect.maxx.X - rect.minn.X),
 		int32(rect.maxx.Y - rect.minn.Y),
@@ -67,6 +101,7 @@ func exportCroppedVideo(fname string, mute bool, framesFrom int32, framesTo int3
 		outfname = filepath.Join(os.Args[1], outfname)
 	}
 
+	// Available arguments, used when necessary
 	cropArgs := ffmpeg.KwArgs{
 		"filter:v": "crop=" + geometry,
 	}
@@ -78,28 +113,36 @@ func exportCroppedVideo(fname string, mute bool, framesFrom int32, framesTo int3
 		"to": convertFramesToTimestamp(framesTo, fps),
 	}
 
-	usedArgs := cropArgs
+	// Merge used args into this
+	usedArgs := ffmpeg.KwArgs{}
 
+	// Apply crop args if crop has been modified
+	if !(rect.minn.X == 0 && rect.minn.Y == 0 &&
+		int32(rect.maxx.X) == curFrameTex.Width && int32(rect.maxx.Y) == curFrameTex.Height) {
+		usedArgs = ffmpeg.MergeKwArgs([]ffmpeg.KwArgs{usedArgs, cropArgs})
+	}
+
+	// Apply mute if muted
 	if mute {
 		usedArgs = ffmpeg.MergeKwArgs([]ffmpeg.KwArgs{usedArgs, muteArgs})
 	}
 
-	if framesFrom != 0 || framesTo != int32(fps) {
+	// Apply trim if A or B trimpoints has been set
+	if framesFrom != 0 || framesTo != int32(curVideo.Frames() - 1) {
 		usedArgs = ffmpeg.MergeKwArgs([]ffmpeg.KwArgs{usedArgs, trimArgs})
 	}
 
-	err := ffmpeg.Input(fname, ffmpeg.KwArgs{}).
-		Output(outfname, usedArgs).OverWriteOutput().Run()
-
+	// Export video
+	err := ffmpeg.Input(fname, ffmpeg.KwArgs{}).Output(outfname, usedArgs).OverWriteOutput().Run()
     if err != nil {
-	    log.Fatalf("could not crop video '%s': %w", fname, err)
+	    log.Fatalf("could not crop video '%s': %v", fname, err)
     }
 }
 
 
-// Go through cwd or dir from first cmd argument and find applicable video files
+// Go through cwd or dir from first cmd argument and find applicable video files.
 func populateVideoFiles() error {
-	var dir string = "./"
+	dir := "./"
 
 	if len(os.Args) == 2 {
 		dir = os.Args[1]
@@ -123,6 +166,7 @@ func populateVideoFiles() error {
 	}
 
 	if len(videoFiles) == 0 {
+		//nolint:err113
 		return errors.New("no video files found")
 	}
 

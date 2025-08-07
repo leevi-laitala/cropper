@@ -1,10 +1,10 @@
-APPNAME = cropper
+APPNAME=cropper
 
-$(APPNAME): main.go area.go video.go view.go const.go
+build: main.go area.go video.go view.go global.go seeker.go
 	go build
 
-lint: main.go area.go video.go view.go const.go
-	golangci-lint run --enable-all --disable depguard,mnd,exhaustruct,err113,funlen
+lint: main.go area.go video.go view.go global.go seeker.go
+	golangci-lint run --config ./golangci-config.yaml
 
 clean:
 	rm $(APPNAME)

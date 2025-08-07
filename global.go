@@ -7,6 +7,7 @@ import (
 
 const (
 	outSuffix                      = "_cropped"
+	ssSuffix                       = "_screenshot"
 
 	videoFormats				   = `(?i)(\.mp4|\.mkv|\.webm)`
 
@@ -21,10 +22,10 @@ var (
 	curVideoIndex int
 
 	curVideo *v.Video
-	curFrame int = 0
+	curFrame int
 	curFrameTex rl.Texture2D
 
 	frameBegin int32
 	frameEnd   int32
-	muted      bool = false
+	muted      = false
 )

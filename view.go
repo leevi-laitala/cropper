@@ -71,7 +71,7 @@ func initNewVideo() error {
 
 	curFrame = 0
 
-	var err error = nil
+	var err error
 
 	curVideo, err = v.NewVideo(videoFiles[curVideoIndex])
 	if err != nil {
@@ -86,6 +86,7 @@ func initNewVideo() error {
 	return nil
 }
 
+//nolint:funlen, cyclop
 func run() {
 	rl.SetConfigFlags(rl.FlagWindowResizable)
 	rl.InitWindow(screenWidth, screenHeight, "Cropper")
@@ -93,7 +94,7 @@ func run() {
 
 	err := initNewVideo()
 	if err != nil {
-		log.Fatalf("failed to load first video: %w", err)
+		log.Fatalf("failed to load first video: %v", err)
 	}
 
 	cam := rl.Camera2D{}
@@ -104,6 +105,28 @@ func run() {
 
 	seeker := seekerRect{}
 	resetSeeker(&seeker)
+
+	// return false if no vides are left
+	goToNextVideo := func() bool {
+		curVideoIndex++
+		if curVideoIndex >= len(videoFiles) {
+			log.Println("All videos cropped")
+
+			return false
+		}
+
+		resetAreaRect(&rect)
+		resetCamera(&cam)
+
+		err := initNewVideo()
+		if err != nil {
+			log.Fatalf("failed to load video: %v", err)
+		}
+
+		resetSeeker(&seeker)
+
+		return true
+	}
 
 	for !rl.WindowShouldClose() {
 		panAndZoom(&cam)
@@ -117,28 +140,30 @@ func run() {
 			err := loadVideoFrameToTexture()
 			if err != nil {
 				curVideo.Close()
-				log.Fatalf("error loading frame to texture: %w", err)
+				log.Fatalf("error loading frame to texture: %v", err)
 			}
 		}
 
 		// Enter key exports current video and loads in next video
 		if rl.IsKeyPressed(rl.KeyEnter) {
 			// Export current video
-			go exportCroppedVideo(videoFiles[curVideoIndex], muted, frameBegin, frameEnd, int32(curVideo.Frames()), curVideo.FPS(), rect)
+			go exportCroppedVideo(videoFiles[curVideoIndex], muted, frameBegin, frameEnd, curVideo.FPS(), rect)
 
-			curVideoIndex++
-			if curVideoIndex >= len(videoFiles) {
-				log.Println("All videos cropped")
-
+			isVideosLeft := goToNextVideo()
+			if !isVideosLeft {
 				break
 			}
+		}
 
-			resetAreaRect(&rect)
-			resetCamera(&cam)
+		// S key exports screenshot of current video
+		if rl.IsKeyPressed(rl.KeyS) {
+			// Export current video
+			go exportScreenshot(videoFiles[curVideoIndex], int32(curFrame), curVideo.FPS(), rect)
 
-			initNewVideo()
-
-			resetSeeker(&seeker)
+			isVideosLeft := goToNextVideo()
+			if !isVideosLeft {
+				break
+			}
 		}
 
 		if rl.IsKeyPressed(rl.KeyC) {
@@ -161,7 +186,7 @@ func run() {
 
 		rl.EndMode2D()
 
-		drawSeeker(&seeker, &cam)
+		drawSeeker(&seeker)
 
 		rl.EndDrawing()
 	}

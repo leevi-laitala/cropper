@@ -8,6 +8,7 @@ func main() {
 	err := populateVideoFiles()
 	if err != nil {
 		log.Fatalln(err)
+
 		return
 	}
 
