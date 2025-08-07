@@ -12,8 +12,8 @@ var (
 )
 
 type seekerRect struct {
-	width	   int32
-	height	   int32
+	width  int32
+	height int32
 }
 
 func frameToWidth(frame int32) int32 {
@@ -34,14 +34,14 @@ func resetSeeker(seeker *seekerRect) {
 //nolint:unparam
 func getTextOffsetX(text string, fontsize int32, x int32) int32 {
 	textWidth := rl.MeasureText(text, fontsize)
-	
-	newx := x - textWidth / 2
+
+	newx := x - textWidth/2
 
 	if newx < 16 {
 		newx = 16
 	}
 
-	if newx > int32(rl.GetScreenWidth()) - textWidth - 16 {
+	if newx > int32(rl.GetScreenWidth())-textWidth-16 {
 		newx = int32(rl.GetScreenWidth()) - textWidth - 16
 	}
 
@@ -67,7 +67,7 @@ func drawSeeker(seeker *seekerRect) {
 			frameToWidth(frameBegin)), seeker.height, fontsize, rl.Red)
 	}
 
-	if frameEnd != int32(curVideo.Frames() - 1) {
+	if frameEnd != int32(curVideo.Frames()-1) {
 		rl.DrawLine(frameToWidth(frameEnd), 0, frameToWidth(frameEnd),
 			seeker.height, rl.Green)
 		frametext = fmt.Sprintf("<- %d", frameEnd)
@@ -77,7 +77,7 @@ func drawSeeker(seeker *seekerRect) {
 
 	frametext = fmt.Sprintf("Muted: %t", muted)
 	rl.DrawText(frametext, getTextOffsetX(frametext, fontsize, 0),
-		int32(rl.GetScreenHeight()) - seeker.height * 2, fontsize, rl.Blue)
+		int32(rl.GetScreenHeight())-seeker.height*2, fontsize, rl.Blue)
 }
 
 // Vim style, type numbers for multiplier for action key

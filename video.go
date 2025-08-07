@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"regexp"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -24,10 +24,10 @@ func loadVideoFrameToTexture() error {
 	}
 
 	img := rl.NewImage(curVideo.FrameBuffer(),
-					   int32(curVideo.Width()),
-					   int32(curVideo.Height()),
-					   1,
-					   rl.UncompressedR8g8b8a8)
+		int32(curVideo.Width()),
+		int32(curVideo.Height()),
+		1,
+		rl.UncompressedR8g8b8a8)
 
 	curFrameTex = rl.LoadTextureFromImage(img)
 
@@ -50,8 +50,8 @@ func convertFramesToTimestamp(frames int32, fps float64) string {
 
 func exportScreenshot(fname string, frame int32, fps float64, rect rectArea) {
 	geometry := fmt.Sprintf("%d:%d:%d:%d",
-		int32(rect.maxx.X - rect.minn.X),
-		int32(rect.maxx.Y - rect.minn.Y),
+		int32(rect.maxx.X-rect.minn.X),
+		int32(rect.maxx.Y-rect.minn.Y),
 		int32(rect.minn.X),
 		int32(rect.minn.Y))
 
@@ -73,19 +73,19 @@ func exportScreenshot(fname string, frame int32, fps float64, rect rectArea) {
 	outArgs := ffmpeg.KwArgs{
 		"filter:v": "crop=" + geometry,
 		"frames:v": "1",
-		"q:v": "2",
+		"q:v":      "2",
 	}
 
 	err := ffmpeg.Input(fname, inArgs).Output(outfname, outArgs).OverWriteOutput().Run()
-    if err != nil {
-	    log.Fatalf("could not create screenshot '%s': %v", fname, err)
-    }
+	if err != nil {
+		log.Fatalf("could not create screenshot '%s': %v", fname, err)
+	}
 }
 
 func exportCroppedVideo(fname string, mute bool, framesFrom int32, framesTo int32, fps float64, rect rectArea) {
 	geometry := fmt.Sprintf("%d:%d:%d:%d",
-		int32(rect.maxx.X - rect.minn.X),
-		int32(rect.maxx.Y - rect.minn.Y),
+		int32(rect.maxx.X-rect.minn.X),
+		int32(rect.maxx.Y-rect.minn.Y),
 		int32(rect.minn.X),
 		int32(rect.minn.Y))
 
@@ -128,17 +128,16 @@ func exportCroppedVideo(fname string, mute bool, framesFrom int32, framesTo int3
 	}
 
 	// Apply trim if A or B trimpoints has been set
-	if framesFrom != 0 || framesTo != int32(curVideo.Frames() - 1) {
+	if framesFrom != 0 || framesTo != int32(curVideo.Frames()-1) {
 		usedArgs = ffmpeg.MergeKwArgs([]ffmpeg.KwArgs{usedArgs, trimArgs})
 	}
 
 	// Export video
 	err := ffmpeg.Input(fname, ffmpeg.KwArgs{}).Output(outfname, usedArgs).OverWriteOutput().Run()
-    if err != nil {
-	    log.Fatalf("could not crop video '%s': %v", fname, err)
-    }
+	if err != nil {
+		log.Fatalf("could not crop video '%s': %v", fname, err)
+	}
 }
-
 
 // Go through cwd or dir from first cmd argument and find applicable video files.
 func populateVideoFiles() error {

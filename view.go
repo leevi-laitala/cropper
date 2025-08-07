@@ -1,12 +1,12 @@
 package main
 
 import (
-	"log"
 	"fmt"
+	"log"
 	"math"
 
-	rl "github.com/gen2brain/raylib-go/raylib"
 	v "github.com/AlexEidt/Vidio"
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 func panAndZoom(cam *rl.Camera2D) {
@@ -22,7 +22,7 @@ func panAndZoom(cam *rl.Camera2D) {
 			scaleFactor = 1 / scaleFactor
 		}
 
-		cam.Zoom = float32(math.Max(0.05, math.Min(float64(cam.Zoom) * scaleFactor, 10)))
+		cam.Zoom = float32(math.Max(0.05, math.Min(float64(cam.Zoom)*scaleFactor, 10)))
 	}
 
 	if rl.IsMouseButtonDown(1) {
@@ -32,19 +32,19 @@ func panAndZoom(cam *rl.Camera2D) {
 		cam.Target = rl.Vector2Add(cam.Target, delta)
 
 		if int32(mouseCurPos.X) < 0 {
-			rl.SetMousePosition(int(mouseCurPos.X) + int(screenWidth), int(mouseCurPos.Y))
+			rl.SetMousePosition(int(mouseCurPos.X)+int(screenWidth), int(mouseCurPos.Y))
 		}
 
 		if int32(mouseCurPos.X) > screenWidth {
-			rl.SetMousePosition(int(mouseCurPos.X) - int(screenWidth), int(mouseCurPos.Y))
+			rl.SetMousePosition(int(mouseCurPos.X)-int(screenWidth), int(mouseCurPos.Y))
 		}
 
 		if int32(mouseCurPos.Y) < 0 {
-			rl.SetMousePosition(int(mouseCurPos.X), int(mouseCurPos.Y) + int(screenHeight))
+			rl.SetMousePosition(int(mouseCurPos.X), int(mouseCurPos.Y)+int(screenHeight))
 		}
 
 		if int32(mouseCurPos.Y) > screenHeight {
-			rl.SetMousePosition(int(mouseCurPos.X), int(mouseCurPos.Y) - int(screenHeight))
+			rl.SetMousePosition(int(mouseCurPos.X), int(mouseCurPos.Y)-int(screenHeight))
 		}
 	}
 }
