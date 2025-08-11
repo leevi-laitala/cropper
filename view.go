@@ -115,14 +115,13 @@ func run() {
 			return false
 		}
 
-		resetAreaRect(&rect)
-		resetCamera(&cam)
-
 		err := initNewVideo()
 		if err != nil {
 			log.Fatalf("failed to load video: %v", err)
 		}
 
+		resetAreaRect(&rect)
+		resetCamera(&cam)
 		resetSeeker(&seeker)
 
 		return true
