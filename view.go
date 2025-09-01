@@ -123,6 +123,7 @@ func run() {
 		resetAreaRect(&rect)
 		resetCamera(&cam)
 		resetSeeker(&seeker)
+		muted = false
 
 		return true
 	}
